@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리자 — my journal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #fafaf8;
+      --surface: #f2f1ee;
+      --border: #e4e2dc;
+      --text: #1a1a18;
+      --muted: #7a7870;
+      --danger: #c0392b;
+    }
+    body { font-family: 'Nanum Gothic', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    nav {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1.4rem 2.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .nav-title { font-size: 15px; font-weight: 700; }
+    .nav-home { font-size: 13px; color: var(--muted); text-decoration: none; }
+    .nav-home:hover { color: var(--text); }
+
+    /* 비밀번호 화면 */
+    #auth-screen {
+      max-width: 360px; margin: 8rem auto; padding: 0 2rem;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    #auth-screen h2 { font-size: 18px; font-weight: 700; margin-bottom: 0.5rem; }
+    #auth-screen p { font-size: 13px; color: var(--muted); }
+
+    /* 공통 인풋 */
+    input[type="text"], input[type="password"], textarea {
+      width: 100%; padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'Nanum Gothic', sans-serif;
+      font-size: 14px;
+      background: white;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus { border-color: var(--text); }
+    textarea { resize: vertical; min-height: 280px; line-height: 1.7; }
+
+    button {
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-family: 'Nanum Gothic', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-primary { background: var(--text); color: var(--bg); border: none; font-weight: 700; }
+    .btn-primary:hover { opacity: 0.75; }
+    .btn-secondary { background: white; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--surface); }
+    .btn-danger { background: white; color: var(--danger); border: 1px solid var(--danger); font-size: 12px; padding: 6px 12px; }
+    .btn-danger:hover { background: #fff0ee; }
+
+    /* 관리자 화면 */
+    #admin-screen { display: none; }
+
+    /* 글쓰기 폼 */
+    .write-section {
+      max-width: 780px; margin: 0 auto;
+      padding: 2.5rem 2.5rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .write-section h2 { font-size: 16px; font-weight: 700; margin-bottom: 1.5rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
+    .form-label { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+
+    /* 이미지 업로드 */
+    .image-upload-area {
+      border: 1.5px dashed var(--border);
+      border-radius: 6px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .image-upload-area:hover { border-color: var(--text); }
+    .image-upload-area input { display: none; }
+    .image-upload-area p { font-size: 13px; color: var(--muted); }
+    .image-preview { width: 100%; max-height: 240px; object-fit: cover; border-radius: 6px; margin-top: 0.75rem; display: none; }
+
+    .form-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
+
+    /* 글 목록 */
+    .posts-section { max-width: 780px; margin: 0 auto; padding: 2rem 2.5rem 5rem; }
+    .posts-section h2 { font-size: 16px; font-weight: 700; margin-bottom: 1.5rem; }
+
+    .post-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 0;
+      border-top: 1px solid var(--border);
+      gap: 1rem;
+    }
+    .post-item:last-child { border-bottom: 1px solid var(--border); }
+    .post-item-info { flex: 1; }
+    .post-item-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .post-item-date { font-size: 12px; color: var(--muted); }
+    .post-item-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      background: var(--text); color: var(--bg);
+      padding: 10px 20px; border-radius: 99px;
+      font-size: 13px; opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+
+    .loading { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+    .empty { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+
+    @media (max-width: 560px) {
+      nav, .write-section, .posts-section { padding-left: 1.25rem; padding-right: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-title">관리자</span>
+  <a class="nav-home" href="index.html">← 사이트로</a>
+</nav>
+
+<!-- 비밀번호 화면 -->
+<div id="auth-screen">
+  <h2>관리자 로그인</h2>
+  <p>비밀번호를 입력해주세요</p>
+  <input type="password" id="password-input" placeholder="비밀번호" onkeydown="if(event.key==='Enter') login()" />
+  <button class="btn-primary" onclick="login()">로그인</button>
+  <p id="auth-error" style="color:#c0392b; font-size:13px; display:none;">비밀번호가 틀렸어요</p>
+</div>
+
+<!-- 관리자 화면 -->
+<div id="admin-screen">
+
+  <!-- 글쓰기 -->
+  <div class="write-section">
+    <h2 id="form-title">새 글 쓰기</h2>
+
+    <div class="form-group">
+      <span class="form-label">제목</span>
+      <input type="text" id="input-title" placeholder="제목을 입력하세요" />
+    </div>
+
+    <div class="form-group">
+      <span class="form-label">내용</span>
+      <textarea id="input-content" placeholder="내용을 입력하세요"></textarea>
+    </div>
+
+    <div class="form-group">
+      <span class="form-label">사진 (선택)</span>
+      <div class="image-upload-area" onclick="document.getElementById('image-file').click()">
+        <input type="file" id="image-file" accept="image/*" onchange="previewImage(event)" />
+        <p>클릭해서 사진 업로드</p>
+        <img class="image-preview" id="image-preview" />
+      </div>
+    </div>
+
+    <input type="hidden" id="edit-id" value="" />
+    <input type="hidden" id="edit-image-url" value="" />
+
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="resetForm()">취소</button>
+      <button class="btn-primary" onclick="savePost()">저장하기</button>
+    </div>
+  </div>
+
+  <!-- 글 목록 -->
+  <div class="posts-section">
+    <h2>작성한 글</h2>
+    <div id="admin-posts-container">
+      <div class="loading">불러오는 중...</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SUPABASE_URL = 'https://qhgfmppamzzhhkflsufz.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoZ2ZtcHBhbXp6aGhrZmxzdWZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNjAyODIsImV4cCI6MjA5MTYzNjI4Mn0.rirTdPvZXhha0kIZqR8q2bSqo1Cwsn96RTga9LFWjtg';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // 비밀번호 (여기서 변경 가능)
+  const ADMIN_PASSWORD = 'ahrtjdrP0324@1m';
+
+  function login() {
+    const pw = document.getElementById('password-input').value;
+    if (pw === ADMIN_PASSWORD) {
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('admin-screen').style.display = 'block';
+      loadAdminPosts();
+    } else {
+      document.getElementById('auth-error').style.display = 'block';
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return `${d.getFullYear()}. ${String(d.getMonth()+1).padStart(2,'0')}. ${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function previewImage(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = document.getElementById('image-preview');
+      img.src = ev.target.result;
+      img.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function uploadImage(file) {
+    const ext = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${ext}`;
+    const { data, error } = await db.storage
+      .from('images')
+      .upload(fileName, file, { upsert: true });
+    if (error) throw error;
+    const { data: urlData } = db.storage.from('images').getPublicUrl(fileName);
+    return urlData.publicUrl;
+  }
+
+  async function savePost() {
+    const title = document.getElementById('input-title').value.trim();
+    const content = document.getElementById('input-content').value.trim();
+    const file = document.getElementById('image-file').files[0];
+    const editId = document.getElementById('edit-id').value;
+    let imageUrl = document.getElementById('edit-image-url').value;
+
+    if (!title) { showToast('제목을 입력해주세요'); return; }
+
+    try {
+      if (file) imageUrl = await uploadImage(file);
+
+      if (editId) {
+        await db.from('posts').update({ title, content, image_url: imageUrl || null }).eq('id', editId);
+        showToast('수정됐어요!');
+      } else {
+        await db.from('posts').insert({ title, content, image_url: imageUrl || null });
+        showToast('저장됐어요!');
+      }
+
+      resetForm();
+      loadAdminPosts();
+    } catch (e) {
+      showToast('오류가 났어요. 다시 시도해주세요.');
+    }
+  }
+
+  function editPost(post) {
+    document.getElementById('form-title').textContent = '글 수정';
+    document.getElementById('input-title').value = post.title;
+    document.getElementById('input-content').value = post.content || '';
+    document.getElementById('edit-id').value = post.id;
+    document.getElementById('edit-image-url').value = post.image_url || '';
+    if (post.image_url) {
+      const img = document.getElementById('image-preview');
+      img.src = post.image_url;
+      img.style.display = 'block';
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function deletePost(id) {
+    if (!confirm('정말 삭제할까요?')) return;
+    await db.from('posts').delete().eq('id', id);
+    showToast('삭제됐어요');
+    loadAdminPosts();
+  }
+
+  function resetForm() {
+    document.getElementById('form-title').textContent = '새 글 쓰기';
+    document.getElementById('input-title').value = '';
+    document.getElementById('input-content').value = '';
+    document.getElementById('image-file').value = '';
+    document.getElementById('image-preview').style.display = 'none';
+    document.getElementById('edit-id').value = '';
+    document.getElementById('edit-image-url').value = '';
+  }
+
+  async function loadAdminPosts() {
+    const { data } = await db.from('posts').select('*').order('created_at', { ascending: false });
+    const container = document.getElementById('admin-posts-container');
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div class="empty">아직 작성된 글이 없어요.</div>';
+      return;
+    }
+    container.innerHTML = data.map(post => `
+      <div class="post-item">
+        <div class="post-item-info">
+          <div class="post-item-title">${post.title}</div>
+          <div class="post-item-date">${formatDate(post.created_at)}</div>
+        </div>
+        <div class="post-item-actions">
+          <button class="btn-secondary" style="font-size:12px;padding:6px 12px" onclick='editPost(${JSON.stringify(post).replace(/'/g, "&#39;")})'>수정</button>
+          <button class="btn-danger" onclick="deletePost('${post.id}')">삭제</button>
+        </div>
+      </div>
+    `).join('');
+  }
+</script>
+</body>
+</html>
