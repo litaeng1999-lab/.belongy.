@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>belongy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nanum+Square+Round&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; background: #fefefe; overflow: hidden; }
+    .page { width: 100vw; height: 100vh; position: relative; }
+    .photo { position: absolute; right: 8%; top: 0; width: 34%; }
+    .photo img { width: 100%; height: auto; display: block; }
+    .arrow { position: absolute; bottom: 2.2rem; left: 2.5rem; z-index: 3; display: flex; align-items: center; text-decoration: none; transition: opacity 0.3s; }
+    .arrow:hover { opacity: 0.5; }
+    .arrow-line { width: 36px; height: 1px; background: #c0bdb8; }
+    .arrow-tip { width: 7px; height: 7px; border-right: 1px solid #c0bdb8; border-top: 1px solid #c0bdb8; transform: rotate(45deg); margin-left: -4px; }
+
+    /* 메모장 */
+    .memo-wrap {
+      position: absolute;
+      top: 50%;
+      left: 2.5rem;
+      transform: translateY(-50%);
+      z-index: 10;
+      width: 220px;
+      height: 220px;
+    }
+    .memo-box {
+      width: 100%;
+      height: 100%;
+      background: #ceeefa;
+      border-radius: 3px;
+      box-shadow:
+        inset 0 2px 6px rgba(255,255,255,0.65),
+        inset 0 -3px 8px rgba(100,180,220,0.25),
+        0 1px 3px rgba(100,180,220,0.3);
+      border: 1px solid rgba(160,210,235,0.5);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .memo-header {
+      height: 36px;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, #b8e6f8 0%, #c6edfa 100%);
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+    }
+    .memo-header span {
+      font-size: 11px;
+      color: rgba(70,140,175,0.6);
+      letter-spacing: 0.03em;
+      font-family: sans-serif;
+    }
+    .memo-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px 10px;
+    }
+    .memo-textarea {
+      flex: 1;
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      font-size: 8pt;
+      line-height: 1.7;
+      color: rgba(40,100,140,0.85);
+      font-family: 'Nanum Square Round', sans-serif;
+    }
+    .memo-textarea::placeholder {
+      color: rgba(100,170,210,0.55);
+      font-family: 'Nanum Square Round', sans-serif;
+    }
+    .memo-footer {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 6px;
+      align-items: center;
+      gap: 8px;
+    }
+    .memo-msg {
+      font-size: 9px;
+      font-family: 'Nanum Square Round', sans-serif;
+      color: rgba(40,100,140,0.7);
+      display: none;
+    }
+    .memo-btn {
+      font-size: 11px;
+      padding: 3px 12px;
+      border-radius: 3px;
+      background: rgba(160,220,245,0.5);
+      border: 1px solid rgba(120,190,225,0.5);
+      color: rgba(40,100,140,0.9);
+      cursor: pointer;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,0.6), 0 1px 2px rgba(100,170,210,0.2);
+      font-family: 'Nanum Square Round', sans-serif;
+      transition: opacity 0.2s;
+    }
+    .memo-btn:hover { opacity: 0.7; }
+    .memo-btn:disabled { opacity: 0.4; cursor: default; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="photo">
+    <img src="hero.jpg" alt="" />
+  </div>
+
+  <!-- 메모장 -->
+  <div class="memo-wrap">
+    <div class="memo-box">
+      <div class="memo-header">
+        <span>belongy</span>
+      </div>
+      <div class="memo-body">
+        <textarea class="memo-textarea" id="memoText" placeholder="당신의 이야기......"></textarea>
+        <div class="memo-footer">
+          <span class="memo-msg" id="memoMsg"></span>
+          <button class="memo-btn" id="memoBtn" onclick="sendMemo()">보내기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <a class="arrow" href="index.html">
+    <div class="arrow-line"></div>
+    <div class="arrow-tip"></div>
+  </a>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://qhgfmppamzzhhkflsufz.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoZ2ZtcHBhbXp6aGhrZmxzdWZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNjAyODIsImV4cCI6MjA5MTYzNjI4Mn0.rirTdPvZXhha0kIZqR8q2bSqo1Cwsn96RTga9LFWjtg';
+
+  async function sendMemo() {
+    const textarea = document.getElementById('memoText');
+    const btn = document.getElementById('memoBtn');
+    const msg = document.getElementById('memoMsg');
+    const text = textarea.value.trim();
+
+    if (!text) return;
+
+    btn.disabled = true;
+    msg.style.display = 'none';
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/memos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+        },
+        body: JSON.stringify({ message: text })
+      });
+
+      if (res.ok) {
+        textarea.value = '';
+        msg.textContent = '전달됐어요 :)';
+        msg.style.display = 'inline';
+        setTimeout(() => { msg.style.display = 'none'; }, 3000);
+      } else {
+        msg.textContent = '다시 시도해줘요';
+        msg.style.display = 'inline';
+      }
+    } catch (e) {
+      msg.textContent = '연결 오류예요';
+      msg.style.display = 'inline';
+    }
+
+    btn.disabled = false;
+  }
+</script>
+</body>
+</html>
