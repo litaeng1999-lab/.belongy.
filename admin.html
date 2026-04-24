@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리자 — belongy</title>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #faf9f7;
+      --surface: #ffffff;
+      --border: #e8e4de;
+      --text: #1a1814;
+      --muted: #8a8278;
+      --accent: #2c2825;
+      --private: #7c3f2a;
+      --private-bg: #fdf4f0;
+      --private-border: #e8c5b5;
+    }
+
+    body {
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      font-weight: 300;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      font-weight: 400;
+      font-size: 1.1rem;
+      letter-spacing: 0.12em;
+    }
+
+    header a {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.03em;
+    }
+
+    header a:hover { color: var(--text); }
+
+    /* ── LOGIN OVERLAY ── */
+    #login-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .login-box {
+      text-align: center;
+    }
+
+    .login-box h2 {
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      font-weight: 400;
+      font-size: 1.3rem;
+      letter-spacing: 0.15em;
+      margin-bottom: 8px;
+    }
+
+    .login-box p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    .login-box input {
+      display: block;
+      width: 260px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      margin: 0 auto 12px;
+    }
+
+    .login-box input:focus { border-color: var(--accent); }
+
+    .login-box button {
+      width: 260px;
+      padding: 10px;
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      font-family: inherit;
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+    }
+
+    .login-box button:hover { color: var(--text); }
+
+    #login-error {
+      font-size: 0.78rem;
+      color: #c0392b;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* ── MAIN ── */
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    section { margin-bottom: 56px; }
+
+    section h2 {
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      font-weight: 400;
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── FORM ── */
+    .field { margin-bottom: 16px; }
+
+    .field label {
+      display: block;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .field input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .field input[type="text"]:focus { border-color: var(--accent); }
+
+    /* ── PRIVATE TOGGLE ── */
+    .private-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border: 1px solid var(--private-border);
+      background: var(--private-bg);
+      margin-bottom: 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .private-toggle input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--private);
+      cursor: pointer;
+    }
+
+    .private-toggle .toggle-label {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .private-toggle .toggle-label strong {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--private);
+    }
+
+    .private-toggle .toggle-label span {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .lock-icon {
+      margin-left: auto;
+      font-size: 1rem;
+      color: var(--private);
+      opacity: 0.6;
+    }
+
+    /* ── EDITOR ── */
+    .toolbar {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      background: #f4f2ef;
+    }
+
+    .toolbar button {
+      padding: 5px 10px;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--text);
+      border-radius: 2px;
+    }
+
+    .toolbar button:hover { background: var(--border); }
+
+    #editor {
+      min-height: 280px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      outline: none;
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      font-size: 1rem;
+      line-height: 1.8;
+    }
+
+    #editor:focus { border-color: var(--accent); }
+
+    #editor img {
+      max-width: 100%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      display: block;
+      margin: 8px 0;
+    }
+
+    #editor img.thumbnail-selected { border-color: var(--accent); }
+
+    /* ── THUMBNAIL ── */
+    .thumbnail-preview {
+      margin-bottom: 16px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .thumbnail-preview img {
+      display: block;
+      width: 120px;
+      height: 80px;
+      object-fit: cover;
+      margin-top: 8px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── FORM ACTIONS ── */
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      padding: 11px 24px;
+      border: 1px solid var(--border);
+      background: transparent;
+      font-family: inherit;
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    .btn:hover { background: var(--border); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover { opacity: 0.85; }
+
+    /* ── POST LIST ── */
+    .post-item {
+      border: 1px solid var(--border);
+      padding: 16px 20px;
+      margin-bottom: 10px;
+      background: var(--surface);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .post-item.is-private {
+      border-color: var(--private-border);
+      background: var(--private-bg);
+    }
+
+    .post-meta { flex: 1; min-width: 0; }
+
+    .post-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .post-title {
+      font-family: 'Gowun Batang', serif;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .badge-private {
+      flex-shrink: 0;
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      padding: 2px 7px;
+      background: var(--private);
+      color: #fff;
+      border-radius: 2px;
+    }
+
+    .post-date {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .post-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .post-actions button {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      background: transparent;
+      font-family: inherit;
+      font-size: 0.78rem;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    .post-actions button:hover { background: var(--border); }
+
+    .post-actions .del-btn {
+      border-color: #ddd;
+      color: #999;
+    }
+
+    .post-actions .del-btn:hover { background: #fee; color: #c0392b; border-color: #c0392b; }
+
+    /* ── LINK MODAL ── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      padding: 28px 32px;
+      border: 1px solid var(--border);
+      width: 360px;
+    }
+
+    .modal h3 {
+      font-family: 'Gowun Batang', serif;
+      font-size: 1rem;
+      margin-bottom: 16px;
+    }
+
+    .modal input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      margin-bottom: 12px;
+    }
+
+    .modal input:focus { border-color: var(--accent); }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    /* ── STATUS ── */
+    #status {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--accent);
+      color: #fff;
+      padding: 12px 20px;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+    }
+
+    #status.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay">
+  <div class="login-box">
+    <h2>belongy</h2>
+    <p>관리자 전용 공간입니다</p>
+    <input type="password" id="pw-input" placeholder="비밀번호" />
+    <button onclick="tryLogin()">로그인</button>
+    <div id="login-error">비밀번호가 틀렸어요</div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <h1>관리자</h1>
+  <a href="https://litaeng1999-lab.github.io/.belongy./index.html">← 사이트로</a>
+</header>
+
+<!-- MAIN -->
+<main>
+
+  <!-- 글쓰기 -->
+  <section>
+    <h2>새 글 쓰기</h2>
+
+    <div class="field">
+      <label>제목</label>
+      <input type="text" id="post-title" placeholder="제목을 입력하세요" />
+    </div>
+
+    <!-- 비밀글 토글 -->
+    <label class="private-toggle">
+      <input type="checkbox" id="is-private" />
+      <div class="toggle-label">
+        <strong>비밀글로 설정</strong>
+        <span>관리자만 볼 수 있습니다. 목록에서 자물쇠로 표시돼요.</span>
+      </div>
+      <span class="lock-icon">🔒</span>
+    </label>
+
+    <!-- 에디터 -->
+    <div class="toolbar">
+      <button onclick="fmt('bold')"><b>B</b></button>
+      <button onclick="fmt('italic')"><i>I</i></button>
+      <button onclick="fmt('underline')"><u>U</u></button>
+      <button onclick="openLinkModal()">링크</button>
+      <button onclick="fmtList()">목록</button>
+      <button onclick="insertPhoto()">사진</button>
+      <button onclick="fmt('removeFormat')">서식제거</button>
+    </div>
+    <div id="editor" contenteditable="true"></div>
+
+    <!-- 썸네일 -->
+    <div class="thumbnail-preview" id="thumbnail-preview" style="display:none;">
+      <span>썸네일</span>
+      <img id="thumbnail-img" src="" alt="썸네일" />
+      <span id="thumbnail-hint" style="display:none; color: var(--muted); font-size:0.75rem;">썸네일로 설정됨 (변경하려면 다른 사진 클릭)</span>
+    </div>
+
+    <input type="hidden" id="thumbnail-url" />
+    <input type="hidden" id="editing-id" />
+
+    <div class="form-actions">
+      <button class="btn" onclick="cancelEdit()">취소</button>
+      <button class="btn btn-primary" onclick="savePost()">저장하기</button>
+    </div>
+  </section>
+
+  <!-- 글 목록 -->
+  <section>
+    <h2>작성한 글</h2>
+    <div id="post-list">불러오는 중...</div>
+  </section>
+
+</main>
+
+<!-- 링크 모달 -->
+<div class="modal-backdrop" id="link-modal">
+  <div class="modal">
+    <h3>링크 삽입</h3>
+    <input type="text" id="link-url" placeholder="https://" />
+    <div class="modal-actions">
+      <button class="btn" onclick="closeLinkModal()">취소</button>
+      <button class="btn btn-primary" onclick="insertLink()">삽입</button>
+    </div>
+  </div>
+</div>
+
+<!-- 상태 토스트 -->
+<div id="status"></div>
+
+<script>
+  const SUPABASE_URL = 'https://qhgfmppamzzhhkflsufz.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoZ2ZtcHBhbXp6aGhrZmxzdWZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNjAyODIsImV4cCI6MjA5MTYzNjI4Mn0.rirTdPvZXhha0kIZqR8q2bSqo1Cwsn96RTga9LFWjtg';
+  const PASSWORD = 'ahrdhkdwjfahrtjdrP0324@1m';
+
+  // ── LOGIN ──
+  function tryLogin() {
+    const val = document.getElementById('pw-input').value;
+    if (val === PASSWORD) {
+      document.getElementById('login-overlay').style.display = 'none';
+      loadPosts();
+    } else {
+      document.getElementById('login-error').style.display = 'block';
+    }
+  }
+
+  document.getElementById('pw-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryLogin();
+  });
+
+  // ── API ──
+  async function api(path, method = 'GET', body = null) {
+    const opts = {
+      method,
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': method === 'POST' ? 'return=representation' : ''
+      }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, opts);
+    if (!res.ok) throw new Error(await res.text());
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  // ── LOAD POSTS ──
+  async function loadPosts() {
+    const list = document.getElementById('post-list');
+    try {
+      const posts = await api('posts?select=*&order=created_at.desc');
+      if (!posts.length) { list.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">아직 글이 없어요</p>'; return; }
+      list.innerHTML = posts.map(p => `
+        <div class="post-item ${p.is_private ? 'is-private' : ''}">
+          <div class="post-meta">
+            <div class="post-title-row">
+              <span class="post-title">${p.title}</span>
+              ${p.is_private ? '<span class="badge-private">🔒 비밀글</span>' : ''}
+            </div>
+            <div class="post-date">${new Date(p.created_at).toLocaleDateString('ko-KR')}</div>
+          </div>
+          <div class="post-actions">
+            <button onclick="editPost(${JSON.stringify(p).replace(/"/g,'&quot;')})">수정</button>
+            <button class="del-btn" onclick="deletePost('${p.id}')">삭제</button>
+          </div>
+        </div>
+      `).join('');
+    } catch(e) {
+      list.innerHTML = '<p style="color:#c0392b;font-size:0.85rem;">불러오기 실패</p>';
+    }
+  }
+
+  // ── SAVE POST ──
+  async function savePost() {
+    const title = document.getElementById('post-title').value.trim();
+    const content = document.getElementById('editor').innerHTML;
+    const image_url = document.getElementById('thumbnail-url').value || null;
+    const is_private = document.getElementById('is-private').checked;
+    const editingId = document.getElementById('editing-id').value;
+
+    if (!title) { showStatus('제목을 입력해주세요'); return; }
+
+    // 본문 속 이미지 URL 수집
+    const tmp = document.createElement('div');
+    tmp.innerHTML = content;
+    const images = [...tmp.querySelectorAll('img')].map(i => i.src);
+
+    try {
+      if (editingId) {
+        await api(`posts?id=eq.${editingId}`, 'PATCH', { title, content, image_url, images, is_private });
+        showStatus('수정했어요');
+      } else {
+        await api('posts', 'POST', { title, content, image_url, images, is_private });
+        showStatus('저장했어요');
+      }
+      cancelEdit();
+      loadPosts();
+    } catch(e) {
+      showStatus('저장 실패: ' + e.message);
+    }
+  }
+
+  // ── EDIT POST ──
+  function editPost(p) {
+    document.getElementById('post-title').value = p.title;
+    document.getElementById('editor').innerHTML = p.content || '';
+    document.getElementById('is-private').checked = !!p.is_private;
+    document.getElementById('editing-id').value = p.id;
+    if (p.image_url) {
+      document.getElementById('thumbnail-url').value = p.image_url;
+      document.getElementById('thumbnail-img').src = p.image_url;
+      document.getElementById('thumbnail-preview').style.display = 'block';
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    attachImageClickHandlers();
+  }
+
+  // ── DELETE POST ──
+  async function deletePost(id) {
+    if (!confirm('이 글을 삭제할까요?')) return;
+    try {
+      await api(`posts?id=eq.${id}`, 'DELETE');
+      showStatus('삭제했어요');
+      loadPosts();
+    } catch(e) {
+      showStatus('삭제 실패');
+    }
+  }
+
+  // ── CANCEL ──
+  function cancelEdit() {
+    document.getElementById('post-title').value = '';
+    document.getElementById('editor').innerHTML = '';
+    document.getElementById('is-private').checked = false;
+    document.getElementById('editing-id').value = '';
+    document.getElementById('thumbnail-url').value = '';
+    document.getElementById('thumbnail-img').src = '';
+    document.getElementById('thumbnail-preview').style.display = 'none';
+  }
+
+  // ── EDITOR UTILS ──
+  function fmt(cmd) {
+    document.getElementById('editor').focus();
+    document.execCommand(cmd, false, null);
+  }
+
+  function fmtList() {
+    document.getElementById('editor').focus();
+    document.execCommand('insertUnorderedList', false, null);
+  }
+
+  function insertPhoto() {
+    const url = prompt('이미지 URL을 입력하세요:');
+    if (!url) return;
+    document.getElementById('editor').focus();
+    document.execCommand('insertHTML', false, `<img src="${url}" style="max-width:100%;" />`);
+    setTimeout(attachImageClickHandlers, 100);
+  }
+
+  function attachImageClickHandlers() {
+    document.getElementById('editor').querySelectorAll('img').forEach(img => {
+      img.onclick = () => {
+        document.getElementById('editor').querySelectorAll('img').forEach(i => i.classList.remove('thumbnail-selected'));
+        img.classList.add('thumbnail-selected');
+        document.getElementById('thumbnail-url').value = img.src;
+        document.getElementById('thumbnail-img').src = img.src;
+        document.getElementById('thumbnail-preview').style.display = 'block';
+        document.getElementById('thumbnail-hint').style.display = 'block';
+      };
+    });
+  }
+
+  document.getElementById('editor').addEventListener('input', () => {
+    setTimeout(attachImageClickHandlers, 100);
+  });
+
+  // ── LINK MODAL ──
+  let savedRange = null;
+
+  function openLinkModal() {
+    const sel = window.getSelection();
+    if (sel.rangeCount) savedRange = sel.getRangeAt(0).cloneRange();
+    document.getElementById('link-modal').classList.add('open');
+    document.getElementById('link-url').value = '';
+    setTimeout(() => document.getElementById('link-url').focus(), 50);
+  }
+
+  function closeLinkModal() {
+    document.getElementById('link-modal').classList.remove('open');
+    savedRange = null;
+  }
+
+  function insertLink() {
+    const url = document.getElementById('link-url').value.trim();
+    if (!url) { closeLinkModal(); return; }
+    const editor = document.getElementById('editor');
+    editor.focus();
+    if (savedRange) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+    }
+    document.execCommand('createLink', false, url);
+    closeLinkModal();
+  }
+
+  document.getElementById('link-url').addEventListener('keydown', e => {
+    if (e.key === 'Enter') insertLink();
+  });
+
+  document.getElementById('link-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('link-modal')) closeLinkModal();
+  });
+
+  // ── STATUS TOAST ──
+  function showStatus(msg) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+  }
+</script>
+</body>
+</html>
